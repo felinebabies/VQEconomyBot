@@ -30,6 +30,12 @@ namespace VestalisQuintet.EconomyBot
             return (newUser);
         }
 
+        /// <summary>
+        /// ユーザーに現在使用中の銀行口座を設定する
+        /// </summary>
+        /// <param name="db"></param>
+        /// <param name="newUser"></param>
+        /// <param name="newBankAccount"></param>
         public static void SetCurrentBankAccountToUser(VQEconomyBotDbContext db, User newUser, BankAccount newBankAccount)
         {
             newUser.CurrentBalanceId = newBankAccount.BankAccountId;
@@ -38,6 +44,13 @@ namespace VestalisQuintet.EconomyBot
             db.SaveChanges();
         }
 
+        /// <summary>
+        /// ユーザーに新しく銀行口座を作成する
+        /// </summary>
+        /// <param name="db"></param>
+        /// <param name="owner"></param>
+        /// <param name="accountName"></param>
+        /// <returns></returns>
         public static BankAccount CreateBankAccount(VQEconomyBotDbContext db, User owner, string accountName)
         {
             BankAccount newAccount = new BankAccount();

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
+using VestalisQuintet.EconomyBot.Models;
 
 namespace VestalisQuintet.EconomyBot
 {
@@ -36,36 +37,48 @@ namespace VestalisQuintet.EconomyBot
             int balance = 0;
             // データベースから残高を検索
             using(var db = new VQEconomyBotDbContext()){
-                // まずユーザを検索する
-                var userItemQuery = db.Users.Where(userItem => (userItem.DiscordId == userInfo.Id));
-                if(userItemQuery.Count() == 0){
-                    // ユーザが存在しない
-                    balance = 0;
+                var targetAccount = EconomyLogic.GetBankAccountFromDiscordUser(db, userInfo);
 
-                    // ユーザを作る（自動的に口座もできる）
-                    var newUser = AccountCreator.CreateUser(db, userInfo.Id, userInfo.Username);
-                }
-                else {
-                    // 残高テーブルを参照する
-                    var objUser = userItemQuery.First();
-                    if(objUser.CurrentBalanceId < 0){
-                        // まだ口座を開設していない
-                        balance = 0;
+                balance = targetAccount.Balance;
+                bankAccountName = targetAccount.AccountName;
+            }
+            string Messages = userInfo.Username + "さんの口座[" + bankAccountName + "]の残高は" + balance + "アドです。\n\n";
 
-                        // 口座を作る
-                        var newBankAccount = AccountCreator.CreateBankAccount(db, objUser, "Primary bank account");
-                        AccountCreator.SetCurrentBankAccountToUser(db, objUser, newBankAccount);
-                    }
-                    else {
-                        // ユーザの選択中の口座を参照して残高を記録する
-                        var balanceQuery = db.BankAccounts.Where(item => item.BankAccountId == objUser.CurrentBalanceId);
-                        Models.BankAccount bankAccount = balanceQuery.First();
-                        balance = bankAccount.Balance;
-                        bankAccountName = bankAccount.AccountName;
+            await ReplyAsync(Messages);
+        }
+
+        /// <summary>
+        /// 指定のuserに、指定額valueを支払う。
+        /// </summary>
+        /// <param name="recipient"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        [Command("pay")]
+        public async Task pay(IUser recipient, int value)
+        {
+            string Messages = "";
+
+            if(value <= 0){
+                Messages = "支払額は1以上である必要があります。\n\n";
+            }
+            else {
+                using(var db = new VQEconomyBotDbContext()){
+                    using(var tran = db.Database.BeginTransaction())
+                    {
+                        // 支払元口座にvalue以上の金額があることを確認する
+                        var sender = Context.Message.Author;
+                        bool sendResult = EconomyLogic.SendMoney(db, sender, recipient, value);
+                        if(sendResult != true){
+                            Messages = "支払い側の口座残高が不足していたため、送金できませんでした。\n\n";
+                        }
+                        else {
+                            Messages = "支払者" + sender.Username + "が受取者" + recipient.Username + "宛に" + value + "アド送金しました。\n\n";
+                        }
+
+                        tran.Commit();
                     }
                 }
             }
-            string Messages = userInfo.Username + "さんの口座[" + bankAccountName + "]の残高は" + balance + "アドです。\n\n";
 
             await ReplyAsync(Messages);
         }
