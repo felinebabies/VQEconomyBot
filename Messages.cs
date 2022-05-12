@@ -32,6 +32,7 @@ namespace VestalisQuintet.EconomyBot
             // 引数なしの場合はコマンド送信者の口座を確認する
 		    var userInfo = user ?? Context.Message.Author;
             
+            string bankAccountName = "Primary bank account";
             int balance = 0;
             // データベースから残高を検索
             using(var db = new VQEconomyBotDbContext()){
@@ -41,7 +42,7 @@ namespace VestalisQuintet.EconomyBot
                     // ユーザが存在しない
                     balance = 0;
 
-                    // ユーザを作る
+                    // ユーザを作る（自動的に口座もできる）
                     var newUser = AccountCreator.CreateUser(db, userInfo.Id, userInfo.Username);
                 }
                 else {
@@ -50,14 +51,21 @@ namespace VestalisQuintet.EconomyBot
                     if(objUser.CurrentBalanceId < 0){
                         // まだ口座を開設していない
                         balance = 0;
+
+                        // 口座を作る
+                        var newBankAccount = AccountCreator.CreateBankAccount(db, objUser, "Primary bank account");
+                        AccountCreator.SetCurrentBankAccountToUser(db, objUser, newBankAccount);
                     }
                     else {
+                        // ユーザの選択中の口座を参照して残高を記録する
                         var balanceQuery = db.BankAccounts.Where(item => item.BankAccountId == objUser.CurrentBalanceId);
-                        balance = balanceQuery.First().Balance;
+                        Models.BankAccount bankAccount = balanceQuery.First();
+                        balance = bankAccount.Balance;
+                        bankAccountName = bankAccount.AccountName;
                     }
                 }
             }
-            string Messages = userInfo.Username + "さんの残高は" + balance + "アドです。\n\n";
+            string Messages = userInfo.Username + "さんの口座[" + bankAccountName + "]の残高は" + balance + "アドです。\n\n";
 
             await ReplyAsync(Messages);
         }

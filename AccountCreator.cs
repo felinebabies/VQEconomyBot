@@ -25,12 +25,17 @@ namespace VestalisQuintet.EconomyBot
             db.SaveChanges();
 
             var newBankAccount = CreateBankAccount(db, newUser, "Primary bank account");
+            SetCurrentBankAccountToUser(db, newUser, newBankAccount);
+
+            return (newUser);
+        }
+
+        public static void SetCurrentBankAccountToUser(VQEconomyBotDbContext db, User newUser, BankAccount newBankAccount)
+        {
             newUser.CurrentBalanceId = newBankAccount.BankAccountId;
 
             db.Users.Update(newUser);
             db.SaveChanges();
-
-            return(newUser);
         }
 
         public static BankAccount CreateBankAccount(VQEconomyBotDbContext db, User owner, string accountName)
