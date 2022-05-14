@@ -57,25 +57,31 @@ namespace VestalisQuintet.EconomyBot
         public async Task pay(IUser recipient, int value)
         {
             string Messages = "";
+            var sender = Context.Message.Author;
 
-            if(value <= 0){
-                Messages = "支払額は1以上である必要があります。\n\n";
+            if(sender.Id == recipient.Id){
+                // 送受信者が同一であれば送金中止
+                Messages = "送受信者が同一の為、送金を中止しました。\n\n";
             }
             else {
-                using(var db = new VQEconomyBotDbContext()){
-                    using(var tran = db.Database.BeginTransaction())
-                    {
-                        // 支払元口座にvalue以上の金額があることを確認する
-                        var sender = Context.Message.Author;
-                        bool sendResult = EconomyLogic.SendMoney(db, sender, recipient, value);
-                        if(sendResult != true){
-                            Messages = "支払い側の口座残高が不足していたため、送金できませんでした。\n\n";
-                        }
-                        else {
-                            Messages = "支払者" + sender.Username + "が受取者" + recipient.Username + "宛に" + value + "アド送金しました。\n\n";
-                        }
+                if(value <= 0){
+                    Messages = "支払額は1以上である必要があります。\n\n";
+                }
+                else {
+                    using(var db = new VQEconomyBotDbContext()){
+                        using(var tran = db.Database.BeginTransaction())
+                        {
+                            // 支払元口座にvalue以上の金額があることを確認する
+                            bool sendResult = EconomyLogic.SendMoney(db, sender, recipient, value);
+                            if(sendResult != true){
+                                Messages = "支払い側の口座残高が不足していたため、送金できませんでした。\n\n";
+                            }
+                            else {
+                                Messages = "支払者" + sender.Username + "が受取者" + recipient.Username + "宛に" + value + "アド送金しました。\n\n";
+                            }
 
-                        tran.Commit();
+                            tran.Commit();
+                        }
                     }
                 }
             }
