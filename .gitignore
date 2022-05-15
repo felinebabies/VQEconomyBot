@@ -13,3 +13,6 @@ obj/
 # End of https://www.toptal.com/developers/gitignore/api/dotnetcore
 /.env
 VQEconomyBotDb.db3
+/VQEconomyBotDb.db3-wal
+/VQEconomyBotDb.db3-shm
+/.vscode

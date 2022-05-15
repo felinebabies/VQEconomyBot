@@ -12,6 +12,15 @@ namespace VestalisQuintet.EconomyBot
     public class Messages : ModuleBase
     {
         /// <summary>
+        /// データベースコンテキスト
+        /// </summary>
+        private readonly VQEconomyBotDbContext _database;
+
+        public Messages(VQEconomyBotDbContext database){
+            _database = database;
+        }
+
+        /// <summary>
         /// [hellovq]というコメントが来た際の処理
         /// </summary>
         /// <returns>Botのコメント</returns>
@@ -36,12 +45,10 @@ namespace VestalisQuintet.EconomyBot
             string bankAccountName = "Primary bank account";
             int balance = 0;
             // データベースから残高を検索
-            using(var db = new VQEconomyBotDbContext()){
-                var targetAccount = EconomyLogic.GetBankAccountFromDiscordUser(db, userInfo);
+            var targetAccount = EconomyLogic.GetBankAccountFromDiscordUser(_database, userInfo);
 
-                balance = targetAccount.Balance;
-                bankAccountName = targetAccount.AccountName;
-            }
+            balance = targetAccount.Balance;
+            bankAccountName = targetAccount.AccountName;
             string Messages = userInfo.Username + "さんの口座[" + bankAccountName + "]の残高は" + balance + "アドです。\n\n";
 
             await ReplyAsync(Messages);
@@ -68,20 +75,18 @@ namespace VestalisQuintet.EconomyBot
                     Messages = "支払額は1以上である必要があります。\n\n";
                 }
                 else {
-                    using(var db = new VQEconomyBotDbContext()){
-                        using(var tran = db.Database.BeginTransaction())
-                        {
-                            // 支払元口座にvalue以上の金額があることを確認する
-                            bool sendResult = EconomyLogic.SendMoney(db, sender, recipient, value);
-                            if(sendResult != true){
-                                Messages = "支払い側の口座残高が不足していたため、送金できませんでした。\n\n";
-                            }
-                            else {
-                                Messages = "支払者" + sender.Username + "が受取者" + recipient.Username + "宛に" + value + "アド送金しました。\n\n";
-                            }
-
-                            tran.Commit();
+                    using(var tran = _database.Database.BeginTransaction())
+                    {
+                        // 支払元口座にvalue以上の金額があることを確認する
+                        bool sendResult = EconomyLogic.SendMoney(_database, sender, recipient, value);
+                        if(sendResult != true){
+                            Messages = "支払い側の口座残高が不足していたため、送金できませんでした。\n\n";
                         }
+                        else {
+                            Messages = "支払者" + sender.Username + "が受取者" + recipient.Username + "宛に" + value + "アド送金しました。\n\n";
+                        }
+
+                        tran.Commit();
                     }
                 }
             }

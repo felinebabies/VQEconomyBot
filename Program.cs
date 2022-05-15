@@ -9,6 +9,7 @@ using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using Discord;
+using Microsoft.EntityFrameworkCore;
 
 // Discord bot参考ページ
 // https://qiita.com/HAGITAKO/items/fff2e029064ea38ff13a
@@ -33,7 +34,12 @@ namespace VestalisQuintet.EconomyBot
 
             client = new DiscordSocketClient();
             commands = new CommandService();
-            services = new Microsoft.Extensions.DependencyInjection.ServiceCollection().BuildServiceProvider();
+            ServiceCollection serviceCollection = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+
+            // DBサービス登録
+            serviceCollection.AddDbContext<VQEconomyBotDbContext>();
+
+            services = serviceCollection.BuildServiceProvider();
             client.MessageReceived += CommandRecieved;
 
             client.Log += Log;
