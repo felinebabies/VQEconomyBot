@@ -43,13 +43,136 @@ namespace VestalisQuintet.EconomyBot
 		    var userInfo = user ?? Context.Message.Author;
             
             string bankAccountName = "Primary bank account";
-            int balance = 0;
+            int bankBalance = 0;
+            int walletBalance = 0;
             // データベースから残高を検索
             var targetAccount = EconomyLogic.GetBankAccountFromDiscordUser(_database, userInfo);
+            var targetUser = EconomyLogic.GetUserFromDiscordUser(_database, userInfo);
 
-            balance = targetAccount.Balance;
+            bankBalance = targetAccount.Balance;
             bankAccountName = targetAccount.AccountName;
-            string Messages = userInfo.Username + "さんの口座[" + bankAccountName + "]の残高は" + balance + "アドです。\n\n";
+            walletBalance = targetUser.Wallet;
+            
+            string Messages = userInfo.Username + "さんの残高:\n" +
+                            "現金: " + walletBalance + "アド\n" +
+                            "預金口座[" + bankAccountName + "]: " + bankBalance + "アド\n\n";
+
+            await ReplyAsync(Messages);
+        }
+
+        /// <summary>
+        /// 現金から銀行口座へ預金する
+        /// </summary>
+        /// <param name="amount"></param>
+        /// <returns></returns>
+        [Command("deposit")]
+        public async Task deposit(int amount)
+        {
+            string Messages = "";
+            var user = Context.Message.Author;
+
+            if (amount <= 0)
+            {
+                Messages = "預金額は1以上である必要があります。\n\n";
+            }
+            else
+            {
+                using (var tran = _database.Database.BeginTransaction())
+                {
+                    bool depositResult = EconomyLogic.DepositMoney(_database, user, amount);
+                    if (!depositResult)
+                    {
+                        Messages = "現金が不足しているため、預金できませんでした。\n\n";
+                    }
+                    else
+                    {
+                        Messages = user.Username + "さんが" + amount + "アドを預金しました。\n\n";
+                    }
+
+                    tran.Commit();
+                }
+            }
+
+            await ReplyAsync(Messages);
+        }
+
+        /// <summary>
+        /// 銀行口座から現金へ引き出す
+        /// </summary>
+        /// <param name="amount"></param>
+        /// <returns></returns>
+        [Command("withdraw")]
+        public async Task withdraw(int amount)
+        {
+            string Messages = "";
+            var user = Context.Message.Author;
+
+            if (amount <= 0)
+            {
+                Messages = "引き出し額は1以上である必要があります。\n\n";
+            }
+            else
+            {
+                using (var tran = _database.Database.BeginTransaction())
+                {
+                    bool withdrawResult = EconomyLogic.WithdrawMoney(_database, user, amount);
+                    if (!withdrawResult)
+                    {
+                        Messages = "預金残高が不足しているため、引き出しできませんでした。\n\n";
+                    }
+                    else
+                    {
+                        Messages = user.Username + "さんが" + amount + "アドを引き出しました。\n\n";
+                    }
+
+                    tran.Commit();
+                }
+            }
+
+            await ReplyAsync(Messages);
+        }
+
+        /// <summary>
+        /// 他のユーザーに現金を送金する
+        /// </summary>
+        /// <param name="recipient"></param>
+        /// <param name="amount"></param>
+        /// <returns></returns>
+        [Command("send")]
+        public async Task send(IUser recipient, int amount)
+        {
+            string Messages = "";
+            var sender = Context.Message.Author;
+
+            if (sender.Id == recipient.Id)
+            {
+                // 送受信者が同一であれば送金中止
+                Messages = "送受信者が同一の為、送金を中止しました。\n\n";
+            }
+            else
+            {
+                if (amount <= 0)
+                {
+                    Messages = "送金額は1以上である必要があります。\n\n";
+                }
+                else
+                {
+                    using (var tran = _database.Database.BeginTransaction())
+                    {
+                        bool sendResult = EconomyLogic.SendCash(_database, sender, recipient, amount);
+                        if (!sendResult)
+                        {
+                            Messages = "現金が不足しているため、送金できませんでした。\n\n";
+                        }
+                        else
+                        {
+                            Messages = "送金者" + sender.Username + "が受取者" + recipient.Username + "宛に現金" + amount + "アドを送金しました。\n\n";
+                        }
+
+                        tran.Commit();
+                    }
+                }
+            }
 
             await ReplyAsync(Messages);
         }
