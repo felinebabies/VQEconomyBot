@@ -10,5 +10,6 @@ namespace VestalisQuintet.EconomyBot.Models
         public string NickName { get; set;}
         public ulong? DiscordId { get; set;}
         public int CurrentBalanceId { get; set;}
+        public int Wallet { get; set;} = 0;
     }
 }

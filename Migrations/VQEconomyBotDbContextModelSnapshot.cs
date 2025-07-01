@@ -56,6 +56,9 @@ namespace VQEconomyBot.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("Wallet")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("UserId");
 
                     b.ToTable("Users");
